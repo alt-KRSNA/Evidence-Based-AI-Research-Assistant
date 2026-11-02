@@ -1,8 +1,73 @@
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# ==============================
+# Virtual Environments
+# ==============================
 .venv/
 venv/
+env/
 
-.pdf
+# ==============================
+# Environment Variables & Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 
-tests/
+# ==============================
+# IDE & Editors
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
 
-data/
+# ==============================
+# Jupyter Notebook
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+
+# ==============================
+# Generated Data & Documents
+# ==============================
+data/raw/
+data/processed/
+data/indexed/
+database/*.db
+
+# PDF files (local research documents)
+*.pdf
+
+# ==============================
+# Machine Learning Artifacts
+# ==============================
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.joblib
+*.safetensors
+
+# ==============================
+# Operating System
+# ==============================
+.DS_Store
+Thumbs.db
+desktop.ini
