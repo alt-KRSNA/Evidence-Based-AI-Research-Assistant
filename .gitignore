@@ -71,3 +71,63 @@ database/*.db
 .DS_Store
 Thumbs.db
 desktop.ini
+
+ Python cache
+__pycache__/
+*.py[cod]
+
+# PDF documents
+*.pdf
+
+# Generated data
+data/raw/
+data/processed/
+data/indexed/
+
+#Test
+test/
+
+# Environment
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
+
+# SQLite databases
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+
+# FAISS generated indexes
+storage/faiss/
+*.faiss
+
+# Logs
+*.log
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
