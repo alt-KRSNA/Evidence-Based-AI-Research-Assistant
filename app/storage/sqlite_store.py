@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 
-DEFAULT_DB_PATH = Path("database/notewise.db")
+DEFAULT_DB_PATH = Path("database/research_assistant.db")
 
 
 
@@ -96,27 +96,28 @@ def save_chunks(document_id, chunks, db_path=DEFAULT_DB_PATH):
     records = []
 
     for chunk in chunks:
+        chunk_id = f"p{chunk['page_number']}_c{chunk['chunk_index']}"
+
+        metadata = {
+            "source": chunk["source"],
+            "chunk_index": chunk["chunk_index"],
+        }
 
         records.append((
             document_id,
-            chunk["chunk_id"],
-            chunk.get("page_number"),
+            chunk_id,
+            chunk["page_number"],
             chunk["text"],
-            chunk.get("token_count"),
-            json.dumps(chunk.get("metadata", {}))
+            None,
+            json.dumps(metadata)
         ))
 
     with get_connection(db_path) as connection:
-
         connection.executemany(
             """
             INSERT INTO chunks (
-                document_id,
-                chunk_id,
-                page_number,
-                content,
-                token_count,
-                metadata
+                document_id, chunk_id, page_number,
+                content, token_count, metadata
             )
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(document_id, chunk_id)
