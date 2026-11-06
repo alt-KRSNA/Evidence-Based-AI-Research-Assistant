@@ -1,63 +1,43 @@
-
-# ==============================
 # Python
-# ==============================
 __pycache__/
 *.py[cod]
-*$py.class
 *.egg-info/
 dist/
 build/
 
-# ==============================
-# Virtual Environments
-# ==============================
-.venv/
+# Virtual environment
 venv/
+.venv/
 env/
 
-# ==============================
-# Environment Variables & Secrets
-# ==============================
+# Environment variables
 .env
 .env.*
 !.env.example
-*.pem
-*.key
 
-# ==============================
-# IDE & Editors
-# ==============================
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# ==============================
-# Jupyter Notebook
-# ==============================
-.ipynb_checkpoints/
-
-# ==============================
-# Logs
-# ==============================
-*.log
-logs/
-
-# ==============================
-# Generated Data & Documents
-# ==============================
+# Generated data
 data/raw/
 data/processed/
 data/indexed/
-database/*.db
 
-# PDF files (local research documents)
+# PDFs
 *.pdf
 
-# ==============================
-# Machine Learning Artifacts
-# ==============================
+# SQLite databases
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+database/*.db-*
+
+# FAISS indexes
+*.faiss
+storage/faiss/
+
+# ML models
 *.pt
 *.pth
 *.onnx
@@ -65,69 +45,11 @@ database/*.db
 *.joblib
 *.safetensors
 
-# ==============================
-# Operating System
-# ==============================
+# Logs
+*.log
+logs/
+
+# OS files
 .DS_Store
 Thumbs.db
 desktop.ini
-
- Python cache
-__pycache__/
-*.py[cod]
-
-# PDF documents
-*.pdf
-
-# Generated data
-data/raw/
-data/processed/
-data/indexed/
-
-#Test
-test/
-
-# Environment
-.venv/
-__pycache__/
-*.py[cod]
-
-# Environment variables
-.env
-.env.*
-
-# SQLite databases
-database/*.db
-database/*.sqlite
-database/*.sqlite3
-database/*.db-journal
-database/*.db-wal
-database/*.db-shm
-
-# FAISS generated indexes
-storage/faiss/
-*.faiss
-
-# Logs
-*.log
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
