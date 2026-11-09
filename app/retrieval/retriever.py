@@ -19,38 +19,42 @@ class Retriever:
         initialize_database()
 
         self.embedder = EmbeddingModel()
-        self.store = VectorStore()
+
+        self.index_path = Path("data/indexes")
+
+        if (
+            (self.index_path / "index.faiss").exists()
+            and (self.index_path / "chunks.json").exists()
+        ):
+            self.store = VectorStore.load(self.index_path)
+        else:
+            self.store = VectorStore()
 
     def ingest_pdf(self, pdf_path: str | Path) -> int:
         """Extract, chunk, embed, store, and index a PDF."""
 
         pdf_path = Path(pdf_path)
 
-        # 1. Extract text from PDF
         pages = extract_pdf_text(pdf_path)
-
-        # 2. Split extracted text into chunks
         chunks = chunk_pages(pages)
 
         if not chunks:
             raise ValueError("No text chunks were created from the PDF.")
 
-        # 3. Generate embeddings
         embeddings = self.embedder.embed_texts(
             [chunk["text"] for chunk in chunks]
         )
 
-        # 4. Save document information in SQLite
         document_id = save_document(
             filename=pdf_path.name,
             file_path=str(pdf_path),
         )
 
-        # 5. Save document chunks in SQLite
         save_chunks(document_id, chunks)
 
-        # 6. Add chunks and embeddings to FAISS
         self.store.add(chunks, embeddings)
+
+        self.store.save(self.index_path)
 
         return len(chunks)
 

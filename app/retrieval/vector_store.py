@@ -1,6 +1,8 @@
 
 import faiss
 import numpy as np
+import json
+from pathlib import Path
 
 from app.ingestion.chunker import TextChunk
 
@@ -21,8 +23,6 @@ class VectorStore:
         chunks: list[TextChunk],
         embeddings: list[list[float]],
     ) -> None:
-        """Add chunks and their embeddings to the index."""
-
         if len(chunks) != len(embeddings):
             raise ValueError("Each chunk must have one embedding.")
 
@@ -39,7 +39,6 @@ class VectorStore:
         if not np.isfinite(vectors).all():
             raise ValueError("Embeddings contain invalid numeric values.")
 
-        start_index = len(self.chunks)
         self.index.add(vectors)
         self.chunks.extend(chunks)
 
@@ -48,18 +47,13 @@ class VectorStore:
         query_embedding: list[float],
         top_k: int = 3,
     ) -> list[tuple[TextChunk, float]]:
-        """Return the most similar chunks and their scores."""
-
         if top_k <= 0:
             raise ValueError("top_k must be positive.")
 
         if not self.chunks:
             return []
 
-        query_vector = np.asarray(
-            [query_embedding],
-            dtype=np.float32,
-        )
+        query_vector = np.asarray([query_embedding], dtype=np.float32)
 
         if query_vector.shape != (1, self.dimension):
             raise ValueError(
@@ -74,7 +68,7 @@ class VectorStore:
             min(top_k, len(self.chunks)),
         )
 
-        results: list[tuple[TextChunk, float]] = []
+        results = []
 
         for score, index in zip(scores[0], indices[0]):
             if index < 0:
@@ -85,3 +79,33 @@ class VectorStore:
             )
 
         return results
+
+    def save(self, directory: str | Path) -> None:
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+
+        faiss.write_index(
+            self.index,
+            str(directory / "index.faiss")
+        )
+
+        with open(directory / "chunks.json", "w", encoding="utf-8") as file:
+            json.dump(self.chunks, file, indent=2)
+
+    @classmethod
+    def load(cls, directory: str | Path) -> "VectorStore":
+        directory = Path(directory)
+
+        index = faiss.read_index(str(directory / "index.faiss"))
+
+        with open(directory / "chunks.json", "r", encoding="utf-8") as file:
+            chunks = json.load(file)
+
+        if index.ntotal != len(chunks):
+            raise ValueError("FAISS index and chunk metadata do not match.")
+
+        store = cls(dimension=index.d)
+        store.index = index
+        store.chunks = chunks
+
+        return store
