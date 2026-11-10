@@ -66,3 +66,11 @@ __pycache__/
 .venv/
 venv/
 .env
+
+# Temporary ingestion debugging scripts
+tests/check_document_duplicates.py
+tests/cleanup_duplicate_document.py
+tests/compare_duplicate_documents.py
+tests/inspect_ingestion_state.py
+tests/rebuild_faiss_index.py
+tests/repair_duplicate_document.py
