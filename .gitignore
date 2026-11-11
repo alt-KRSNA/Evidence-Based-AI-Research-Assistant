@@ -74,3 +74,7 @@ tests/compare_duplicate_documents.py
 tests/inspect_ingestion_state.py
 tests/rebuild_faiss_index.py
 tests/repair_duplicate_document.py
+
+# Frontend runtime data
+frontend/data/
+frontend/database/

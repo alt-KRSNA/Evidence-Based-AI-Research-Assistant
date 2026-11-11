@@ -7,6 +7,7 @@ from app.ingestion.pdf_loader import extract_pdf_text
 from app.retrieval.embeddings import EmbeddingModel
 from app.retrieval.vector_store import VectorStore
 from app.storage.sqlite_store import (
+    DEFAULT_DB_PATH,
     initialize_database,
     calculate_file_hash,
     get_document_by_hash,
@@ -19,12 +20,25 @@ from app.storage.sqlite_store import (
 class Retriever:
     """Retrieve relevant evidence from ingested PDFs."""
 
-    def __init__(self) -> None:
-        initialize_database()
+    def __init__(
+        self,
+        db_path: str | Path = DEFAULT_DB_PATH,
+        index_path: str | Path | None = None,
+    ) -> None:
+
+        self.db_path = Path(db_path)
+
+        # Keep test databases and indexes isolated.
+        if index_path is not None:
+            self.index_path = Path(index_path)
+        elif self.db_path == DEFAULT_DB_PATH:
+            self.index_path = Path("data/indexes")
+        else:
+            self.index_path = self.db_path.parent / "indexes"
+
+        initialize_database(self.db_path)
 
         self.embedder = EmbeddingModel()
-
-        self.index_path = Path("data/indexes")
 
         if (
             (self.index_path / "index.faiss").exists()
@@ -66,7 +80,10 @@ class Retriever:
     ) -> int:
         """Ensure an existing document's chunks are present in FAISS."""
 
-        db_chunks = get_document_chunks(document_id)
+        db_chunks = get_document_chunks(
+            document_id,
+            db_path=self.db_path,
+        )
 
         if not db_chunks:
             raise ValueError(
@@ -141,7 +158,10 @@ class Retriever:
         file_hash = calculate_file_hash(pdf_path)
 
         # Step 2: Check whether this PDF already exists.
-        existing_document = get_document_by_hash(file_hash)
+        existing_document = get_document_by_hash(
+            file_hash,
+            db_path=self.db_path,
+        )
 
         if existing_document:
             print(
@@ -167,15 +187,20 @@ class Retriever:
             [chunk["text"] for chunk in chunks]
         )
 
-        # Step 5: Register the document using its SHA-256 hash.
+        # Step 5: Register the document.
         document_id = save_document(
             filename=pdf_path.name,
             file_path=str(pdf_path.resolve()),
             file_hash=file_hash,
+            db_path=self.db_path,
         )
 
         # Step 6: Save chunks in SQLite.
-        save_chunks(document_id, chunks)
+        save_chunks(
+            document_id,
+            chunks,
+            db_path=self.db_path,
+        )
 
         # Step 7: Attach document IDs to FAISS metadata.
         index_chunks = self._prepare_index_chunks(

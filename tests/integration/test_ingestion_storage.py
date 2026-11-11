@@ -2,11 +2,12 @@
 import sqlite3
 import tempfile
 import unittest
-
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
 import pymupdf
+from streamlit import connection
 
 from app.retrieval.retriever import Retriever
 from app.storage.sqlite_store import get_document_chunks
@@ -78,15 +79,8 @@ class TestIngestionStorageIntegration(unittest.TestCase):
         )
 
         # Verify document was saved in SQLite
-        with sqlite3.connect(self.db_path) as connection:
-            document = connection.execute(
-                """
-                SELECT id, filename
-                FROM documents
-                WHERE filename = ?
-                """,
-                ("research.pdf",),
-            ).fetchone()
+        with closing(sqlite3.connect(self.db_path)) as connection:
+            document = connection.execute("SELECT id, filename FROM documents WHERE filename = ?",("research.pdf",),).fetchone()
 
         self.assertIsNotNone(document)
 
