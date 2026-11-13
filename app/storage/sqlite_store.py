@@ -275,3 +275,38 @@ def get_document_chunks(
         chunks.append(chunk)
 
     return chunks
+
+
+def get_all_chunks(db_path=DEFAULT_DB_PATH):
+    """Retrieve all chunks from all stored documents."""
+
+    with get_connection(db_path) as connection:
+
+        results = connection.execute(
+            """
+            SELECT
+                document_id,
+                chunk_id,
+                page_number,
+                content AS text,
+                metadata
+            FROM chunks
+            ORDER BY document_id, page_number, chunk_id
+            """
+        ).fetchall()
+
+    chunks = []
+
+    for result in results:
+        chunk = dict(result)
+        chunk["metadata"] = json.loads(chunk["metadata"])
+
+        chunks.append({
+            "document_id": chunk["document_id"],
+            "source": chunk["metadata"]["source"],
+            "page_number": chunk["page_number"],
+            "chunk_index": chunk["metadata"]["chunk_index"],
+            "text": chunk["text"],
+        })
+
+    return chunks

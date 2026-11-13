@@ -12,6 +12,7 @@ from app.storage.sqlite_store import (
     calculate_file_hash,
     get_document_by_hash,
     get_document_chunks,
+    get_all_chunks,
     save_document,
     save_chunks,
 )
@@ -40,19 +41,21 @@ class Retriever:
 
         self.embedder = EmbeddingModel()
 
-        if (
-            (self.index_path / "index.faiss").exists()
-            and (self.index_path / "chunks.json").exists()
-        ):
-            self.store = VectorStore.load(self.index_path)
-        else:
-            self.store = VectorStore()
+        # SQLite is the source of truth.
+        database_chunks = get_all_chunks(
+            db_path=self.db_path
+        )
+
+        self.store = self._load_or_rebuild_index(
+            database_chunks
+        )
 
     @staticmethod
     def _chunk_key(chunk: dict) -> tuple:
-        """Create a unique identity for a chunk."""
+        """Create a unique identity for a chunk within a document."""
 
         return (
+            chunk.get("document_id"),
             chunk["source"],
             chunk["page_number"],
             chunk["chunk_index"],
@@ -62,17 +65,109 @@ class Retriever:
     @staticmethod
     def _prepare_index_chunks(
         chunks: list[dict],
-        document_id: str,
+        document_id: str | None = None,
     ) -> list[dict]:
         """Attach document IDs to chunks stored in FAISS."""
 
         return [
             {
                 **chunk,
-                "document_id": document_id,
+                "document_id": (
+                    document_id
+                    if document_id is not None
+                    else chunk["document_id"]
+                ),
             }
             for chunk in chunks
         ]
+
+    def _load_or_rebuild_index(
+        self,
+        database_chunks: list[dict],
+    ) -> VectorStore:
+        """Load a valid FAISS index or rebuild it from SQLite."""
+
+        index_file = self.index_path / "index.faiss"
+        metadata_file = self.index_path / "chunks.json"
+
+        if index_file.exists() and metadata_file.exists():
+
+            try:
+                store = VectorStore.load(self.index_path)
+
+                # Validate embedding dimensions.
+                if store.dimension != 384:
+                    raise ValueError(
+                        "FAISS embedding dimension is incorrect."
+                    )
+
+                # Validate that FAISS metadata matches SQLite.
+                database_counts = Counter(
+                    self._chunk_key(chunk)
+                    for chunk in database_chunks
+                )
+
+                index_counts = Counter(
+                    self._chunk_key(chunk)
+                    for chunk in store.chunks
+                )
+
+                if database_counts != index_counts:
+                    raise ValueError(
+                        "FAISS metadata does not match SQLite."
+                    )
+
+                print("Existing FAISS index loaded successfully.")
+
+                return store
+
+            except Exception as error:
+                print(
+                    f"FAISS index could not be loaded: {error}"
+                )
+                print("Starting FAISS recovery from SQLite...")
+
+        else:
+            print("FAISS index files are missing.")
+            print("Starting FAISS recovery from SQLite...")
+
+        return self._rebuild_index(database_chunks)
+
+    def _rebuild_index(
+        self,
+        database_chunks: list[dict],
+    ) -> VectorStore:
+        """Rebuild the complete FAISS index using SQLite chunks."""
+
+        store = VectorStore()
+
+        if not database_chunks:
+            print(
+                "No SQLite chunks found. Creating empty FAISS index."
+            )
+            store.save(self.index_path)
+            return store
+
+        print(
+            f"Rebuilding FAISS using "
+            f"{len(database_chunks)} SQLite chunks..."
+        )
+
+        embeddings = self.embedder.embed_texts(
+            [chunk["text"] for chunk in database_chunks]
+        )
+
+        index_chunks = self._prepare_index_chunks(
+            database_chunks
+        )
+
+        store.add(index_chunks, embeddings)
+        store.save(self.index_path)
+
+        print("FAISS recovery completed successfully.")
+        print(f"Recovered vectors: {len(store.chunks)}")
+
+        return store
 
     def _sync_existing_document(
         self,
@@ -92,6 +187,7 @@ class Retriever:
 
         expected_chunks = [
             {
+                "document_id": document_id,
                 "source": chunk["metadata"]["source"],
                 "page_number": chunk["page_number"],
                 "chunk_index": chunk["metadata"]["chunk_index"],
